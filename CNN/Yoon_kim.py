@@ -1,0 +1,140 @@
+import pandas as pd
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D,  Dropout
+from keras.layers import concatenate
+from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
+from keras.models import Model, Sequential
+from keras.layers import Convolution1D,GlobalMaxPooling1D
+from keras import initializers, regularizers, constraints, optimizers, layers
+from keras.utils import to_categorical
+import numpy as np
+import sys
+import os
+
+#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
+
+#df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
+df = pd.read_csv("Data/restuarant_review_5_label_unbalanced.csv")
+train = df.sample(frac = 0.8,random_state = 200)
+test = df.drop(train.index)
+train.loc[:,'stars'] -= 1
+print(np.unique(train['stars']))
+
+max_features = 6000
+tokenizer = Tokenizer(num_words=max_features)
+tokenizer.fit_on_texts(train['Processed_Reviews'])
+list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews'])
+
+
+maxlen = 130
+X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
+y = to_categorical(train['stars'])
+#####################
+# Test data
+tokenizer.fit_on_texts(test['Processed_Reviews'])
+list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews'])
+
+
+maxlen = 130
+X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
+test.loc[:,'stars'] -=1
+y_test = test['stars']
+print(np.unique(test['stars']))
+
+
+#####################################################################
+# Using pretrained glove vector
+#####################################################################
+GLOVE_DIR = "/home/ec2-user/Data/"
+embeddings_index = {}
+f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
+for line in f:
+    values = line.split()
+    word = values[0]
+    coefs = np.asarray(values[1:], dtype='float32')
+    embeddings_index[word] = coefs
+f.close()
+print('Total %s word vectors in Glove 6B 100d.' % len(embeddings_index))
+
+
+word_index = tokenizer.word_index
+
+embedding_matrix = np.random.random((len(word_index) + 1, embed_size))
+for word, i in word_index.items():
+    embedding_vector = embeddings_index.get(word)
+    if embedding_vector is not None:
+        # words not found in embedding index will be all-zeros.
+        embedding_matrix[i] = embedding_vector
+
+embed_size = 100       
+embedding_layer = Embedding(len(word_index) + 1,
+                            embed_size,
+                            weights=[embedding_matrix],
+                            input_length=maxlen,
+                            trainable=False)
+
+
+
+#############################################
+# Original yoon kim with batch norm and drop out0
+#############################################
+conv_filters = 128
+sequence_input = Input(shape=(maxlen,), dtype='int32')
+embedded_sequences = embedding_layer(sequence_input)
+
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
+btch1_1 = BatchNormalization()(conv1_1)
+actv1_1 = Activation('relu')(btch1_1)
+drp1_1  = Dropout(0.2)(actv1_1)
+glmp1_1 = GlobalMaxPooling1D()(drp1_1)
+
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+btch1_2 = BatchNormalization()(conv1_2)
+actv1_2 = Activation('relu')(btch1_2)
+drp1_2  = Dropout(0.2)(actv1_2)
+glmp1_2 = GlobalMaxPooling1D()(drp1_2)
+
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+btch1_3 = BatchNormalization()(conv1_3)
+actv1_3 = Activation('relu')(btch1_3)
+drp1_3  = Dropout(0.2)(actv1_3)
+glmp1_3 = GlobalMaxPooling1D()(drp1_3)
+
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+btch1_4 = BatchNormalization()(conv1_4)
+actv1_4 = Activation('relu')(btch1_4)
+drp1_4  = Dropout(0.2)(actv1_4)
+glmp1_4 = GlobalMaxPooling1D()(drp1_4)
+
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+drp1 = Dropout(0.2)(cnct)
+
+dns1  = Dense(32, activation='relu')(drp1)
+btch1 = BatchNormalization()(dns1)
+drp2  = Dropout(0.2)(btch1)
+
+out = Dense(5, activation='softmax')(drp2)
+
+
+model = Model(inputs=sequence_input, outputs=out)
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
+model.summary()
+
+
+batch_size = 100
+epochs = 10
+model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
+
+
+prediction = model.predict(X_test)
+y_pred = np.argmax(prediction,axis = 1)
+y_test = np.array(y_test)
+print(y_pred[:10])
+print(y_test.shape)
+print(y_pred.shape)
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score, confusion_matrix
+print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
