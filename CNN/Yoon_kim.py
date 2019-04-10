@@ -11,11 +11,47 @@ from keras.utils import to_categorical
 import numpy as np
 import sys
 import os
+import tensorflow as tf
+import keras.backend.tensorflow_backend as ktf
+
+# Get the number of cores assigned to this job.
+def get_n_cores():
+    # On a login node run Python with:
+    # export NSLOTS=4
+    # python mycode.py
+    #
+    nslots = os.getenv('NSLOTS')
+    if nslots is not None:
+      return int(nslots)
+    raise ValueError('Environment variable NSLOTS is not defined.')
+
+# Get the Tensorflow backend session.
+def get_session():
+    try:
+        nthreads = get_n_cores() - 1
+        if nthreads >= 1:
+            session_conf = tf.ConfigProto(
+                intra_op_parallelism_threads=nthreads,
+                inter_op_parallelism_threads=1,
+                allow_soft_placement=True)
+            return tf.Session(config=session_conf)
+    except: 
+        sys.stderr.write('NSLOTS is not set, using default Tensorflow session.\n')
+        sys.stderr.flush()
+    return ktf.get_session()
+
+# Assign the configured Tensorflow session to keras
+ktf.set_session(get_session()) 
+# Rest of your Keras script starts here....
 
 #df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
 
 #df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
-df = pd.read_csv("Data/restuarant_review_5_label_unbalanced.csv")
+
+print("finished importing")
+
+
+df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
 train = df.sample(frac = 0.8,random_state = 200)
 test = df.drop(train.index)
 train.loc[:,'stars'] -= 1
@@ -46,7 +82,8 @@ print(np.unique(test['stars']))
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
-GLOVE_DIR = "/home/ec2-user/Data/"
+GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
+#GLOVE_DIR ="/home/ec2-user/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
 for line in f:
@@ -59,7 +96,7 @@ print('Total %s word vectors in Glove 6B 100d.' % len(embeddings_index))
 
 
 word_index = tokenizer.word_index
-
+embed_size = 100 
 embedding_matrix = np.random.random((len(word_index) + 1, embed_size))
 for word, i in word_index.items():
     embedding_vector = embeddings_index.get(word)
@@ -67,7 +104,7 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-embed_size = 100       
+      
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
@@ -125,7 +162,7 @@ model.summary()
 
 
 batch_size = 100
-epochs = 10
+epochs = 100
 model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 
