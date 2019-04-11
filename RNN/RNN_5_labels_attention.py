@@ -1,7 +1,7 @@
 import pandas as pd
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D,  Dropout
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
