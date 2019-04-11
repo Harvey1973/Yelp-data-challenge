@@ -1,7 +1,7 @@
 import pandas as pd
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
@@ -13,6 +13,7 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
+from keras import backend as K
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -115,12 +116,60 @@ activations = Bidirectional(LSTM(32, return_sequences = True))(embedded_sequence
 attention = Dense(1, activation='tanh')(activations)
 attention = Flatten()(attention)
 attention = Activation('softmax')(attention)
-attention = RepeatVector(units)(attention)
+attention = RepeatVector(units*2)(attention)
 attention = Permute([2, 1])(attention)
 
 
-sent_representation = merge([activations, attention], mode='mul')
-sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units,))(sent_representation)
+sent_representation = multiply([activations, attention])
+sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
+
+out = Dense(5, activation='softmax')(sent_representation)
+
+model = Model(inputs=sequence_input, outputs=out)
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
+model.summary()
+
+batch_size = 512
+epochs = 100
+model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
+
+
+prediction = model.predict(X_test)
+y_pred = np.argmax(prediction,axis = 1)
+y_test = np.array(y_test)
+print(y_pred[:10])
+print(y_test.shape)
+print(y_pred.shape)
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score, confusion_matrix
+print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
+
+
+
+#############################################################
+print("finished embeeding matrix computation")   
+embedding_layer = Embedding(len(word_index) + 1,
+                            embed_size,
+                            weights=[embedding_matrix],
+                            input_length=maxlen,
+                            trainable=True)
+print("start building model") 
+sequence_input = Input(shape=(maxlen,), dtype='int32')
+embedded_sequences = embedding_layer(sequence_input)
+
+units = 32
+activations = Bidirectional(LSTM(32, return_sequences = True))(embedded_sequences)
+
+# compute importance for each step
+attention = Dense(1, activation='tanh')(activations)
+attention = Flatten()(attention)
+attention = Activation('softmax')(attention)
+attention = RepeatVector(units*2)(attention)
+attention = Permute([2, 1])(attention)
+
+
+sent_representation = multiply([activations, attention])
+sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
 
 out = Dense(5, activation='softmax')(sent_representation)
 
