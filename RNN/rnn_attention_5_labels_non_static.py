@@ -1,5 +1,5 @@
 import pandas as pd
-import cPickle
+import pickle
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
@@ -139,8 +139,8 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_random.pickle", "wb") as output_file:
-    cPickle.dump(history.history, output_file)
+with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_random", "wb") as output_file:
+    pickle.dump(history.history, output_file)
 
 
 
