@@ -126,7 +126,7 @@ model = Model(inputs=sequence_input, outputs=out)
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 
-batch_size = 100
+batch_size = 512
 epochs = 100
 model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
