@@ -2,7 +2,7 @@ import pandas as pd
 import cPickle
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
@@ -14,7 +14,6 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
-from keras import backend as K
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -45,6 +44,15 @@ def get_session():
 # Assign the configured Tensorflow session to keras
 ktf.set_session(get_session()) 
 # Rest of your Keras script starts here....
+print("finished importing")
+
+
+
+#######################################################################
+# Read in Data and tokenize , prepare training data and test data
+#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
+#df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
+
 
 
 df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
@@ -74,6 +82,9 @@ test.loc[:,'stars'] -=1
 y_test = test['stars']
 print(np.unique(test['stars']))
 
+#######################################################################
+
+
 
 #####################################################################
 # Using pretrained glove vector
@@ -100,40 +111,73 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-print("finished embeeding matrix computation")   
+      
+#embedding_layer = Embedding(len(word_index) + 1,
+#                            embed_size,
+#                            weights=[embedding_matrix],
+#                            input_length=maxlen,
+#                            trainable=False)
+
+
+
+#Randomly initialized 
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
-                            weights=[embedding_matrix],
                             input_length=maxlen,
                             trainable=True)
-print("start building model") 
+
+
+#############################################
+# Original yoon kim with batch norm and drop out0
+#############################################
+conv_filters = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
-units = 64
-activations = Bidirectional(LSTM(units, return_sequences = True))(embedded_sequences)
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
+btch1_1 = BatchNormalization()(conv1_1)
+actv1_1 = Activation('relu')(btch1_1)
+drp1_1  = Dropout(0.2)(actv1_1)
+glmp1_1 = GlobalMaxPooling1D()(drp1_1)
 
-# compute importance for each step
-attention = Dense(1, activation='tanh')(activations)
-attention = Flatten()(attention)
-attention = Activation('softmax')(attention)
-attention = RepeatVector(units*2)(attention)
-attention = Permute([2, 1])(attention)
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+btch1_2 = BatchNormalization()(conv1_2)
+actv1_2 = Activation('relu')(btch1_2)
+drp1_2  = Dropout(0.2)(actv1_2)
+glmp1_2 = GlobalMaxPooling1D()(drp1_2)
 
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+btch1_3 = BatchNormalization()(conv1_3)
+actv1_3 = Activation('relu')(btch1_3)
+drp1_3  = Dropout(0.2)(actv1_3)
+glmp1_3 = GlobalMaxPooling1D()(drp1_3)
 
-sent_representation = multiply([activations, attention])
-sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+btch1_4 = BatchNormalization()(conv1_4)
+actv1_4 = Activation('relu')(btch1_4)
+drp1_4  = Dropout(0.2)(actv1_4)
+glmp1_4 = GlobalMaxPooling1D()(drp1_4)
 
-out = Dense(5, activation='softmax')(sent_representation)
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+drp1 = Dropout(0.2)(cnct)
+
+dns1  = Dense(32, activation='relu')(drp1)
+btch1 = BatchNormalization()(dns1)
+drp2  = Dropout(0.2)(btch1)
+
+out = Dense(5, activation='softmax')(drp2)
+
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
+model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 
-batch_size = 512
-epochs = 100
-history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
+batch_size = 512
+epochs = 3
+history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 #################################################################
 #Save train history as dict 

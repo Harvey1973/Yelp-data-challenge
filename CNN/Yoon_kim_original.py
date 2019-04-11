@@ -2,7 +2,7 @@ import pandas as pd
 import cPickle
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
@@ -14,7 +14,6 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
-from keras import backend as K
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -45,6 +44,14 @@ def get_session():
 # Assign the configured Tensorflow session to keras
 ktf.set_session(get_session()) 
 # Rest of your Keras script starts here....
+print("finished importing")
+
+
+#######################################################################
+# Read in Data and tokenize , prepare training data and test data
+#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
+#df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
+
 
 
 df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
@@ -74,6 +81,9 @@ test.loc[:,'stars'] -=1
 y_test = test['stars']
 print(np.unique(test['stars']))
 
+#######################################################################
+
+
 
 #####################################################################
 # Using pretrained glove vector
@@ -100,31 +110,55 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-print("finished embeeding matrix computation")   
+      
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=True)
-print("start building model") 
+                            trainable=False)
+
+#Randomly initialized 
+#embedding_layer = Embedding(len(word_index) + 1,
+#                            embed_size,
+#                            input_length=maxlen,
+#                            trainable=False)
+
+
+
+##############################
+# Orignal Yoon Kim 
+##############################
+
+conv_filters = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
-units = 64
-activations = Bidirectional(LSTM(units, return_sequences = True))(embedded_sequences)
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
 
-# compute importance for each step
-attention = Dense(1, activation='tanh')(activations)
-attention = Flatten()(attention)
-attention = Activation('softmax')(attention)
-attention = RepeatVector(units*2)(attention)
-attention = Permute([2, 1])(attention)
+actv1_1 = Activation('relu')(conv1_1)
+glmp1_1 = GlobalMaxPooling1D()(actv1_1)
 
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+actv1_2 = Activation('relu')(conv1_2)
+glmp1_2 = GlobalMaxPooling1D()(actv1_2)
 
-sent_representation = multiply([activations, attention])
-sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+actv1_3 = Activation('relu')(conv1_3)
+glmp1_3 = GlobalMaxPooling1D()(actv1_3)
 
-out = Dense(5, activation='softmax')(sent_representation)
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+actv1_4 = Activation('relu')(conv1_4)
+glmp1_4 = GlobalMaxPooling1D()(actv1_4)
+
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+
+dns1  = Dense(32, activation='relu')(cnct)
+drp2  = Dropout(0.5)(dns1)
+
+out = Dense(5, activation='softmax')(drp2)
+
 
 model = Model(inputs=sequence_input, outputs=out)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
@@ -139,7 +173,7 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_random.pickle", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_original.pickle", "wb") as output_file:
     cPickle.dump(history.history, output_file)
 
 
@@ -154,3 +188,4 @@ print(y_pred.shape)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
+
