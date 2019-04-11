@@ -111,7 +111,7 @@ sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 units = 64
-activations = Bidirectional(LSTM(units, return_sequences = True))(embedded_sequences)
+activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout = 0.2))(embedded_sequences)
 
 # compute importance for each step
 attention = Dense(1, activation='tanh')(activations)

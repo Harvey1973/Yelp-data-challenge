@@ -176,7 +176,7 @@ model.summary()
 
 
 batch_size = 512
-epochs = 3
+epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 #################################################################

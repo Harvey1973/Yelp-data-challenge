@@ -69,7 +69,8 @@ word_index = tokenizer.word_index
 embed_size = 128
 model = Sequential()
 model.add(Embedding(len(word_index)+1, embed_size,input_length = maxlen))
-model.add(Bidirectional(LSTM(32, return_sequences = True)))
+model.add(LSTM(32, return_sequences = True))
+#model.add(Bidirectional(LSTM(32, return_sequences = True)))
 model.add(GlobalMaxPool1D())
 model.add(Dense(20, activation="relu"))
 model.add(Dropout(0.05))
@@ -78,7 +79,7 @@ model.summary()
 model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 batch_size = 512
-epochs = 3
+epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 #################################################################
