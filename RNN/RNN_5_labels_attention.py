@@ -98,15 +98,17 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-      
+print("finished embeeding matrix computation")   
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
                             trainable=False)
+print("start building model") 
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
+units = 32
 activations = Bidirectional(LSTM(32, return_sequences = True))(embedded_sequences)
 
 # compute importance for each step
@@ -120,7 +122,7 @@ attention = Permute([2, 1])(attention)
 sent_representation = merge([activations, attention], mode='mul')
 sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units,))(sent_representation)
 
-probabilities = Dense(5, activation='softmax')(sent_representation)
+out = Dense(5, activation='softmax')(sent_representation)
 
 model = Model(inputs=sequence_input, outputs=out)
 model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
