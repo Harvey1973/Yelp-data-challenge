@@ -2,7 +2,7 @@ import pandas as pd
 import pickle
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
@@ -14,6 +14,7 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
+from keras import backend as K
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -44,21 +45,13 @@ def get_session():
 # Assign the configured Tensorflow session to keras
 ktf.set_session(get_session()) 
 # Rest of your Keras script starts here....
-print("finished importing")
 
 
-#######################################################################
-# Read in Data and tokenize , prepare training data and test data
-#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
+#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_balanced.csv"
 #df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
-
-
-
-train = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_train.csv")
-test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_test.csv")
-
-train.loc[:,'stars'] -= 1
-print(np.unique(train['stars']))
+#df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
+train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
+test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
 
 max_features = 6000
 tokenizer = Tokenizer(num_words=max_features)
@@ -68,7 +61,7 @@ list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews'])
 
 maxlen = 130
 X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
-y = to_categorical(train['stars'])
+y = train['stars']
 #####################
 # Test data
 tokenizer.fit_on_texts(test['Processed_Reviews'])
@@ -77,19 +70,15 @@ list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews'])
 
 maxlen = 130
 X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
-test.loc[:,'stars'] -=1
 y_test = test['stars']
 print(np.unique(test['stars']))
-
-#######################################################################
-
-
 
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
+#GLOVE_DIR = "/home/ec2-user/Data/"
+#GLOVE_DIR = "/Users/harvey/Desktop/Data/"
 GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
-#GLOVE_DIR ="/home/ec2-user/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
 for line in f:
@@ -102,7 +91,7 @@ print('Total %s word vectors in Glove 6B 100d.' % len(embeddings_index))
 
 
 word_index = tokenizer.word_index
-embed_size = 100 
+embed_size = 100
 embedding_matrix = np.random.random((len(word_index) + 1, embed_size))
 for word, i in word_index.items():
     embedding_vector = embeddings_index.get(word)
@@ -110,73 +99,54 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-      
+
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
                             trainable=True)
-
+'''
 #Randomly initialized 
-#embedding_layer = Embedding(len(word_index) + 1,
-#                            embed_size,
-#                            input_length=maxlen,
-#                            trainable=False)
+embedding_layer = Embedding(len(word_index) + 1,
+                            embed_size,
+                            input_length=maxlen,
+                            trainable=True)
 
-
-
-
-convs = []
-filter_sizes = [3,4,5]
+'''
 
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
+activations = Bidirectional(LSTM(32, return_sequences = True,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
+glob_pool = MaxPooling1D(pool_size = 4)(activations)
+dense_1 = Dense(20, activation="relu")(glob_pool)
+drop_1 = Dropout(0.25)(dense_1)
+flat1 = Flatten()(drop_1)
+out = Dense(1, activation="sigmoid")(flat1)
 
-
-for fsz in filter_sizes:
-    l_conv = Conv1D(nb_filter=128,filter_length=fsz,activation='relu',kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
-    l_pool = MaxPooling1D(4)(l_conv)
-    convs.append(l_pool)
-   
-l_merge = concatenate(convs,axis=1) 
-l_cov1= Conv1D(128, 5, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_merge)
-l_pool1 = MaxPooling1D(4)(l_cov1)
-l_cov2 = Conv1D(128, 5, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_pool1)
-l_pool2 = MaxPooling1D(4)(l_cov2)
-l_flat = Flatten()(l_pool2)
-l_dense = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_flat)
-preds = Dense(5, activation='softmax')(l_dense)
-
-model = Model(sequence_input, preds)
-model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
-              metrics=['acc'])
-
-
+model = Model(inputs=sequence_input, outputs=out)
 model.summary()
-
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 batch_size = 512
 epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
+
+y_test = test["stars"]
+list_sentences_test = test['Processed_Reviews']
+list_tokenized_test = tokenizer.texts_to_sequences(list_sentences_test)
+X_te = pad_sequences(list_tokenized_test, maxlen=maxlen)
+prediction = model.predict(X_te)
+y_pred = (prediction > 0.5)
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import f1_score, confusion_matrix
+print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
+print('F1-score: {0}'.format(f1_score(y_pred, y_test)))
+
+
 #################################################################
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_deep_pre", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/2_label/rnn_bilstm_pre", "wb") as output_file:
     pickle.dump(history.history, output_file)
-
-
-
-
-prediction = model.predict(X_test)
-y_pred = np.argmax(prediction,axis = 1)
-y_test = np.array(y_test)
-print(prediction[:10])
-print(y_pred[:10])
-print(y_test.shape)
-print(y_pred.shape)
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score, confusion_matrix
-print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))

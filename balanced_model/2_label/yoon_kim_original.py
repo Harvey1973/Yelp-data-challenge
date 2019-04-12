@@ -44,7 +44,8 @@ def get_session():
 # Assign the configured Tensorflow session to keras
 ktf.set_session(get_session()) 
 # Rest of your Keras script starts here....
-print("finished importing")
+
+
 
 
 #######################################################################
@@ -54,10 +55,11 @@ print("finished importing")
 
 
 
-train = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_train.csv")
-test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_test.csv")
-
-train.loc[:,'stars'] -= 1
+#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_balanced.csv"
+#df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
+#df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
+train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
+test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
 print(np.unique(train['stars']))
 
 max_features = 6000
@@ -68,7 +70,7 @@ list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews'])
 
 maxlen = 130
 X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
-y = to_categorical(train['stars'])
+y =train['stars']
 #####################
 # Test data
 tokenizer.fit_on_texts(test['Processed_Reviews'])
@@ -77,7 +79,6 @@ list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews'])
 
 maxlen = 130
 X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
-test.loc[:,'stars'] -=1
 y_test = test['stars']
 print(np.unique(test['stars']))
 
@@ -90,6 +91,7 @@ print(np.unique(test['stars']))
 #####################################################################
 GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
 #GLOVE_DIR ="/home/ec2-user/Data/"
+#GLOVE_DIR = "/Users/harvey/Desktop/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
 for line in f:
@@ -125,58 +127,63 @@ embedding_layer = Embedding(len(word_index) + 1,
 
 
 
+##############################
+# Orignal Yoon Kim 
+##############################
 
-convs = []
-filter_sizes = [3,4,5]
-
+conv_filters = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
 
-for fsz in filter_sizes:
-    l_conv = Conv1D(nb_filter=128,filter_length=fsz,activation='relu',kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
-    l_pool = MaxPooling1D(4)(l_conv)
-    convs.append(l_pool)
-   
-l_merge = concatenate(convs,axis=1) 
-l_cov1= Conv1D(128, 5, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_merge)
-l_pool1 = MaxPooling1D(4)(l_cov1)
-l_cov2 = Conv1D(128, 5, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_pool1)
-l_pool2 = MaxPooling1D(4)(l_cov2)
-l_flat = Flatten()(l_pool2)
-l_dense = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(0.1))(l_flat)
-preds = Dense(5, activation='softmax')(l_dense)
+actv1_1 = Activation('relu')(conv1_1)
+glmp1_1 = GlobalMaxPooling1D()(actv1_1)
 
-model = Model(sequence_input, preds)
-model.compile(loss='categorical_crossentropy',
-              optimizer='adam',
-              metrics=['acc'])
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+actv1_2 = Activation('relu')(conv1_2)
+glmp1_2 = GlobalMaxPooling1D()(actv1_2)
+
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+actv1_3 = Activation('relu')(conv1_3)
+glmp1_3 = GlobalMaxPooling1D()(actv1_3)
+
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+actv1_4 = Activation('relu')(conv1_4)
+glmp1_4 = GlobalMaxPooling1D()(actv1_4)
+
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+
+dns1  = Dense(32, activation='relu')(cnct)
+drp2  = Dropout(0.5)(dns1)
+
+out = Dense(1, activation='sigmoid')(drp2)
 
 
+model = Model(inputs=sequence_input, outputs=out)
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 model.summary()
-
 
 batch_size = 512
 epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
-#################################################################
-#Save train history as dict 
-#################################################################
-
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_deep_pre", "wb") as output_file:
-    pickle.dump(history.history, output_file)
-
-
-
-
 prediction = model.predict(X_test)
 y_pred = np.argmax(prediction,axis = 1)
 y_test = np.array(y_test)
-print(prediction[:10])
 print(y_pred[:10])
 print(y_test.shape)
 print(y_pred.shape)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
+
+#################################################################
+#Save train history as dict 
+#################################################################
+
+with open(r"/usr4/cs542sp/zzjiang/History/2_label/yoon_kim_ori_pre", "wb") as output_file:
+    pickle.dump(history.history, output_file)
+
