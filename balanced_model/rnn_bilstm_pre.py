@@ -142,7 +142,7 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/rnn_bi_pre", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/rnn_bilstm_pre", "wb") as output_file:
     pickle.dump(history.history, output_file)
 
 
