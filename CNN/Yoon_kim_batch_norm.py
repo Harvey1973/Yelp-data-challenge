@@ -111,21 +111,21 @@ for word, i in word_index.items():
         embedding_matrix[i] = embedding_vector
 
       
-#embedding_layer = Embedding(len(word_index) + 1,
-#                            embed_size,
-#                            weights=[embedding_matrix],
-#                            input_length=maxlen,
-#                            trainable=False)
+embedding_layer = Embedding(len(word_index) + 1,
+                            embed_size,
+                            weights=[embedding_matrix],
+                            input_length=maxlen,
+                            trainable=True)
 
 
-
+'''
 #Randomly initialized 
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             input_length=maxlen,
                             trainable=True)
 
-
+'''
 #############################################
 # Original yoon kim with batch norm and drop out0
 #############################################
@@ -187,7 +187,7 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_random", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_pre", "wb") as output_file:
     pickle.dump(history.history, output_file)
 
 

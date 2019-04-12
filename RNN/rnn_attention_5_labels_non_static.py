@@ -112,7 +112,7 @@ sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 units = 64
-activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout = 0.2),kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
+activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout = 0.2,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
 
 # compute importance for each step
 attention = Dense(1, activation='tanh')(activations)
@@ -140,7 +140,7 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/Yoon_kim_bacth_norm_random", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/rnn_5_pre", "wb") as output_file:
     pickle.dump(history.history, output_file)
 
 

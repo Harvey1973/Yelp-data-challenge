@@ -1,4 +1,6 @@
 import pandas as pd
+import pickle
+from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
@@ -73,10 +75,7 @@ test.loc[:,'stars'] -=1
 y_test = test['stars']
 print(np.unique(test['stars']))
 
-word_index = tokenizer.word_index
-embed_size = 128
 
-'''
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
@@ -93,7 +92,8 @@ f.close()
 print('Total %s word vectors in Glove 6B 100d.' % len(embeddings_index))
 
 
-
+word_index = tokenizer.word_index
+embed_size = 100 
 embedding_matrix = np.random.random((len(word_index) + 1, embed_size))
 for word, i in word_index.items():
     embedding_vector = embeddings_index.get(word)
@@ -102,43 +102,37 @@ for word, i in word_index.items():
         embedding_matrix[i] = embedding_vector
 
 print("finished embeeding matrix computation")   
-
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=False)
+                            trainable=True)
+
 
 '''
-
 #Randomly initialized 
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             input_length=maxlen,
                             trainable=True)
-
+'''
 print("start building model") 
+
+
+########
+units = 64
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-
-units = 64
-activations = Bidirectional(LSTM(64, return_sequences = True,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
-
-# compute importance for each step
-attention = Dense(1, activation='tanh')(activations)
-attention = Flatten()(attention)
-attention = Activation('softmax')(attention)
-attention = RepeatVector(units*2)(attention)
-attention = Permute([2, 1])(attention)
-
-
-sent_representation = multiply([activations, attention])
-sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
-
-out = Dense(5, activation='softmax')(sent_representation)
+activations = Bidirectional(LSTM(units, return_sequences = True,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
+#glob_pool = GlobalMaxPool1D()(activations)
+glob_pool = MaxPooling1D(pool_size = 4)(activations)
+dense_1 = Dense(256, activation="relu",kernel_regularizer=regularizers.l2(0.1))(glob_pool)
+drop_1 = Dropout(0.25)(dense_1)
+flat1 = Flatten()(drop_1)
+out = Dense(5, activation="softmax")(flat1)
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model.summary()
 
 batch_size = 512
@@ -148,7 +142,7 @@ history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_spli
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/rnn_5_rand", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/rnn_bi_pre", "wb") as output_file:
     pickle.dump(history.history, output_file)
 
 
@@ -163,5 +157,3 @@ print(y_pred.shape)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
-
-
