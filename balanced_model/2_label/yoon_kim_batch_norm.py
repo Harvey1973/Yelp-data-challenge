@@ -191,8 +191,7 @@ epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 prediction = model.predict(X_test)
-y_pred = np.argmax(prediction,axis = 1)
-y_test = np.array(y_test)
+y_pred = (prediction > 0.5)
 print(y_pred[:10])
 print(y_test.shape)
 print(y_pred.shape)
