@@ -52,6 +52,9 @@ ktf.set_session(get_session())
 #df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
 train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
 test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
+print(train.shape)
+print(test.shape)
+
 
 max_features = 6000
 tokenizer = Tokenizer(num_words=max_features)
@@ -113,10 +116,10 @@ embedding_layer = Embedding(len(word_index) + 1,
                             trainable=True)
 
 '''
-
+units = 32
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-activations = LSTM(32, return_sequences = True,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
+activations = LSTM(units, return_sequences = True,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 glob_pool = MaxPooling1D(pool_size = 4)(activations)
 dense_1 = Dense(20, activation="relu")(glob_pool)
 drop_1 = Dropout(0.25)(dense_1)

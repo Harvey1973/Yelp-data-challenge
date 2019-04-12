@@ -61,6 +61,9 @@ ktf.set_session(get_session())
 #df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
 train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
 test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
+print(train.shape)
+print(test.shape)
+
 print(np.unique(train['stars']))
 
 max_features = 6000

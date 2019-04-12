@@ -105,4 +105,3 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
 print('F1-score: {0}'.format(f1_score(y_pred, y_test)))
-print('Confusion matrix:')
