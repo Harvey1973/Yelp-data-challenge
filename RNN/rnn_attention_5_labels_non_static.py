@@ -1,5 +1,6 @@
 import pandas as pd
 import pickle
+from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,merge,Lambda,multiply
@@ -111,7 +112,7 @@ sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 units = 64
-activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout = 0.2))(embedded_sequences)
+activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout = 0.2),kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 
 # compute importance for each step
 attention = Dense(1, activation='tanh')(activations)
@@ -124,7 +125,7 @@ attention = Permute([2, 1])(attention)
 sent_representation = multiply([activations, attention])
 sent_representation = Lambda(lambda xin: K.sum(xin, axis=-2), output_shape=(units*2,))(sent_representation)
 
-out = Dense(5, activation='softmax')(sent_representation)
+out = Dense(5, activation='softmax',kernel_regularizer=regularizers.l2(0.1))(sent_representation)
 
 model = Model(inputs=sequence_input, outputs=out)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])

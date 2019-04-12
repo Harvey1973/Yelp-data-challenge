@@ -1,5 +1,6 @@
 import pandas as pd
 import pickle
+from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
@@ -52,8 +53,6 @@ print("finished importing")
 # Read in Data and tokenize , prepare training data and test data
 #df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
 #df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
-
-
 
 df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
 train = df.sample(frac = 0.8,random_state = 200)
@@ -135,50 +134,55 @@ sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
-conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 btch1_1 = BatchNormalization()(conv1_1)
 actv1_1 = Activation('relu')(btch1_1)
 drp1_1  = Dropout(0.2)(actv1_1)
-glmp1_1 = GlobalMaxPooling1D()(drp1_1)
+glmp1_1 = MaxPooling1D(pool_size = 4)(drp1_1)
+#glmp1_1 = GlobalMaxPool1D()(drp1_1)
 
-conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 btch1_2 = BatchNormalization()(conv1_2)
 actv1_2 = Activation('relu')(btch1_2)
 drp1_2  = Dropout(0.2)(actv1_2)
-glmp1_2 = GlobalMaxPooling1D()(drp1_2)
+glmp1_2 = MaxPooling1D(pool_size = 4)(drp1_2)
+#glmp1_2 =  GlobalMaxPool1D()(drp1_2)
 
-conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+
+
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 btch1_3 = BatchNormalization()(conv1_3)
 actv1_3 = Activation('relu')(btch1_3)
 drp1_3  = Dropout(0.2)(actv1_3)
-glmp1_3 = GlobalMaxPooling1D()(drp1_3)
+glmp1_3 = MaxPooling1D(pool_size = 4)(drp1_3)
+#glmp1_3 = GlobalMaxPool1D()(drp1_3)
 
-conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 btch1_4 = BatchNormalization()(conv1_4)
 actv1_4 = Activation('relu')(btch1_4)
 drp1_4  = Dropout(0.2)(actv1_4)
-glmp1_4 = GlobalMaxPooling1D()(drp1_4)
+glmp1_4 = MaxPooling1D(pool_size = 4)(drp1_4)
+#glmp1_4 = GlobalMaxPool1D()(drp1_4)
 
 # Gather all convolution layers
 cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
 drp1 = Dropout(0.2)(cnct)
 
-dns1  = Dense(32, activation='relu')(drp1)
+dns1  = Dense(256, activation='relu')(drp1)
 btch1 = BatchNormalization()(dns1)
 drp2  = Dropout(0.2)(btch1)
-
-out = Dense(5, activation='softmax')(drp2)
+flat = Flatten()(drp2)
+out = Dense(5, activation='softmax')(flat)
 
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='rmsprop', loss='categorical_crossentropy', metrics=['acc'])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 
 
 batch_size = 512
 epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
-
 #################################################################
 #Save train history as dict 
 #################################################################
