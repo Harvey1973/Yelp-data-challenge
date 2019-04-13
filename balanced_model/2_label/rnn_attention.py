@@ -69,8 +69,6 @@ y = train['stars']
 tokenizer.fit_on_texts(test['Processed_Reviews'])
 list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews'])
 
-
-maxlen = 130
 X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
 y_test = test['stars']
 print(np.unique(test['stars']))
@@ -149,16 +147,17 @@ epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 
-y_test = test["stars"]
-list_sentences_test = test['Processed_Reviews']
-list_tokenized_test = tokenizer.texts_to_sequences(list_sentences_test)
-X_te = pad_sequences(list_tokenized_test, maxlen=maxlen)
-prediction = model.predict(X_te)
-y_pred = (prediction > 0.5)
+prediction = model.predict(X_test)
+y_pred = (prediction > 0.5).astype(int).reshape(-1,)
+#print(y_pred[-200:])
+y_test = np.array(y_test)
+#print(y_test[-200:])
+#print(y_test.shape)
+#print(y_pred.shape)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
-print('F1-score: {0}'.format(f1_score(y_pred, y_test)))
+
 
 #################################################################
 #Save train history as dict 

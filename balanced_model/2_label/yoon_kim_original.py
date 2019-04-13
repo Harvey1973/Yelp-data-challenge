@@ -166,7 +166,7 @@ out = Dense(1, activation='sigmoid')(drp2)
 
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['acc'])
 model.summary()
 
 batch_size = 512
@@ -174,10 +174,12 @@ epochs = 100
 history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
 
 prediction = model.predict(X_test)
-y_pred = (prediction > 0.5)
-print(y_pred[:10])
-print(y_test.shape)
-print(y_pred.shape)
+y_pred = (prediction > 0.5).astype(int).reshape(-1,)
+#print(y_pred[-200:])
+y_test = np.array(y_test)
+#print(y_test[-200:])
+#print(y_test.shape)
+#print(y_pred.shape)
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import f1_score, confusion_matrix
 print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
