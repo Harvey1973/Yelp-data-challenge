@@ -69,8 +69,8 @@ print(np.unique(train['stars']))
 
 max_features = 6000
 tokenizer = Tokenizer(num_words=max_features)
-tokenizer.fit_on_texts(train['Processed_Reviews'])
-list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews'])
+tokenizer.fit_on_texts(train['Processed_Reviews\r'])
+list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews\r'])
 
 
 maxlen = 130
@@ -78,8 +78,8 @@ X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
 y =train['stars']
 #####################
 # Test data
-tokenizer.fit_on_texts(test['Processed_Reviews'])
-list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews'])
+tokenizer.fit_on_texts(test['Processed_Reviews\r'])
+list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews\r'])
 
 
 maxlen = 130
