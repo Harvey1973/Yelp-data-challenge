@@ -1,5 +1,6 @@
 import pandas as pd
 import pickle
+from keras import regularizers
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
@@ -44,7 +45,7 @@ def get_session():
 # Assign the configured Tensorflow session to keras
 ktf.set_session(get_session()) 
 # Rest of your Keras script starts here....
-
+print("finished importing")
 
 
 
@@ -53,17 +54,16 @@ ktf.set_session(get_session())
 #df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_5_label_unbalanced.csv")
 #df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
 
+train = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_train.csv")
+test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balance_5_test.csv")
 
+train.loc[:,'stars'] -= 1
+test.loc[:,'stars'] -=1
+reviews_train = train['Processed_Reviews']
+reviews_test = test['Processed_Reviews']
+print(np.unique(train['stars']))
+print(np.unique(test['stars']))
 
-#df = pd.read_csv("C:/Users/Harvey/Desktop/Yelp_data_set/restuarant_review_balanced.csv"
-#df = pd.read_csv("/home/ec2-user/Data/restuarant_review_5_label_unbalanced.csv")
-#df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
-train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
-test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
-reviews_train = train['Processed_Reviews\r']
-reviews_test = test['Processed_Reviews\r']
-print(train.shape)
-print(test.shape)
 whole_data = pd.concat([reviews_train,reviews_test])
 
 maxlen = 100
@@ -73,13 +73,15 @@ tokenizer = Tokenizer(num_words=max_features)
 tokenizer.fit_on_texts(whole_data)
 list_tokenized_train = tokenizer.texts_to_sequences(reviews_train)
 x_train = pad_sequences(list_tokenized_train, maxlen=maxlen)
-y_train =train['stars']
+y_train =to_categorical(train['stars'])
 #####################
 # Test data
 #tokenizer.fit_on_texts(reviews_test)
 list_tokenized_test = tokenizer.texts_to_sequences(reviews_test)
 x_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
-y_test = test['stars']
+y_test = to_categorical(test['stars'])
+
+#######################################################################
 
 
 
@@ -87,9 +89,8 @@ y_test = test['stars']
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
-#GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
-GLOVE_DIR ="/home/ec2-user/Data/"
-#GLOVE_DIR = "/Users/harvey/Desktop/Data/"
+GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
+#GLOVE_DIR ="/home/ec2-user/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
 for line in f:
@@ -110,49 +111,70 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-        
+      
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
                             trainable=False)
 
+
+'''
 #Randomly initialized 
-#embedding_layer = Embedding(len(word_index) + 1,
-#                            embed_size,
-#                            input_length=maxlen,
-#                            trainable=True)
+embedding_layer = Embedding(len(word_index) + 1,
+                            embed_size,
+                            input_length=maxlen,
+                            trainable=True)
 
+'''
+##############################
+# Orignal Yoon Kim 
+##############################
 
-
-units = 32
+conv_filters = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-activations = LSTM(units, return_sequences = True,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
-glob_pool = MaxPooling1D(pool_size = 4)(activations)
-dense_1 = Dense(128, activation="relu")(glob_pool)
-drop_1 = Dropout(0.15)(dense_1)
-flat1 = Flatten()(drop_1)
-out = Dense(1, activation="sigmoid")(flat1)
+
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
+actv1_1 = Activation('relu')(conv1_1)
+glmp1_1 = GlobalMaxPooling1D()(actv1_1)
+
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+actv1_2 = Activation('relu')(conv1_2)
+glmp1_2 = GlobalMaxPooling1D()(actv1_2)
+
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+actv1_3 = Activation('relu')(conv1_3)
+glmp1_3 = GlobalMaxPooling1D()(actv1_3)
+
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+actv1_4 = Activation('relu')(conv1_4)
+glmp1_4 = GlobalMaxPooling1D()(actv1_4)
+
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+
+drp1  = Dropout(0.5)(cnct)
+dns1  = Dense(32, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+
+out = Dense(5, activation='softmax')(dns1)
 
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 ###############################################################################
 
-
 batch_size = 512
-epochs = 50
+epochs = 100
 history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, validation_data = [x_test,y_test])
-
 score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)
 print("Test acc: " , acc)
 print("Test score: " , score)
-
 #################################################################
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/2_label/rnn_lstm_2", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/5_label/yoon_kim_ori_5", "wb") as output_file:
     pickle.dump(history.history, output_file)

@@ -60,40 +60,35 @@ ktf.set_session(get_session())
 #df = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_review_5_label_unbalanced.csv")
 train= pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_train.csv",lineterminator='\n')
 test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",lineterminator='\n')
+reviews_train = train['Processed_Reviews\r']
+reviews_test = test['Processed_Reviews\r']
 print(train.shape)
 print(test.shape)
-print(np.unique(train['stars']))
+whole_data = pd.concat([reviews_train,reviews_test])
 
-
-max_features = 6000
+maxlen = 100
+max_features = 15000
 tokenizer = Tokenizer(num_words=max_features)
-tokenizer.fit_on_texts(train['Processed_Reviews\r'])
-list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews\r'])
 
-
-maxlen = 130
-X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
-y =train['stars']
+tokenizer.fit_on_texts(whole_data)
+list_tokenized_train = tokenizer.texts_to_sequences(reviews_train)
+x_train = pad_sequences(list_tokenized_train, maxlen=maxlen)
+y_train =train['stars']
 #####################
 # Test data
-tokenizer.fit_on_texts(test['Processed_Reviews\r'])
-list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews\r'])
-
-
-maxlen = 130
-X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
+#tokenizer.fit_on_texts(reviews_test)
+list_tokenized_test = tokenizer.texts_to_sequences(reviews_test)
+x_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
 y_test = test['stars']
-print(np.unique(test['stars']))
 
-#######################################################################
 
 
 
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
-GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
-#GLOVE_DIR ="/home/ec2-user/Data/"
+#GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
+GLOVE_DIR ="/home/ec2-user/Data/"
 #GLOVE_DIR = "/Users/harvey/Desktop/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
@@ -115,32 +110,30 @@ for word, i in word_index.items():
         # words not found in embedding index will be all-zeros.
         embedding_matrix[i] = embedding_vector
 
-      
+        
 embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=True)
+                            trainable=False)
 
 #Randomly initialized 
 #embedding_layer = Embedding(len(word_index) + 1,
 #                            embed_size,
 #                            input_length=maxlen,
-#                            trainable=False)
-
+#                            trainable=True)
 
 
 ##############################
 # Orignal Yoon Kim 
 ##############################
 
-conv_filters = 128
+conv_filters = 4
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
 conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
-
 actv1_1 = Activation('relu')(conv1_1)
 glmp1_1 = GlobalMaxPooling1D()(actv1_1)
 
@@ -157,39 +150,34 @@ actv1_4 = Activation('relu')(conv1_4)
 glmp1_4 = GlobalMaxPooling1D()(actv1_4)
 
 # Gather all convolution layers
-cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
-
-dns1  = Dense(32, activation='relu')(cnct)
-drp2  = Dropout(0.5)(dns1)
-
-out = Dense(1, activation='sigmoid')(drp2)
+#cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+#cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
+cnct = concatenate([glmp1_1, glmp1_2], axis=1)
+drp1  = Dropout(0.1)(cnct)
+dns1  = Dense(4, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+#drp2  = Dropout(0.5)(dns1)
+#dns2 = 
+out = Dense(1, activation='sigmoid')(dns1)
 
 
 model = Model(inputs=sequence_input, outputs=out)
-model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['acc'])
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['acc'])
 model.summary()
+###############################################################################
+
 
 batch_size = 512
-epochs = 100
-history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
+epochs = 50
+history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, validation_data = [x_test,y_test])
 
-prediction = model.predict(X_test)
-y_pred = (prediction > 0.5).astype(int).reshape(-1,)
-#print(y_pred[-200:])
-y_test = np.array(y_test)
-#print(y_test[-200:])
-#print(y_test.shape)
-#print(y_pred.shape)
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score, confusion_matrix
-print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
-
-
+score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)
+print("Test acc: " , acc)
+print("Test score: " , score)
 
 #################################################################
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/2_label/yoon_kim_ori_pre", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/2_label/yoon_kim_ori_2", "wb") as output_file:
     pickle.dump(history.history, output_file)
 
