@@ -65,27 +65,26 @@ test = pd.read_csv("/usr4/cs542sp/zzjiang/Data/restuarant_balanced_2_test.csv",l
 print(train.shape)
 print(test.shape)
 
-print(np.unique(train['stars']))
+reviews_train = train['Processed_Reviews\r']
+reviews_test = test['Processed_Reviews\r']
 
+whole_data = pd.concat([reviews_train,reviews_test])
+
+maxlen = 100
 max_features = 6000
 tokenizer = Tokenizer(num_words=max_features)
-tokenizer.fit_on_texts(train['Processed_Reviews\r'])
-list_tokenized_train = tokenizer.texts_to_sequences(train['Processed_Reviews\r'])
 
-
-maxlen = 130
-X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
-y =train['stars']
+tokenizer.fit_on_texts(whole_data)
+list_tokenized_train = tokenizer.texts_to_sequences(reviews_train)
+x_train = pad_sequences(list_tokenized_train, maxlen=maxlen)
+y_train =train['stars']
 #####################
 # Test data
-tokenizer.fit_on_texts(test['Processed_Reviews\r'])
-list_tokenized_test = tokenizer.texts_to_sequences(test['Processed_Reviews\r'])
-
-
-maxlen = 130
-X_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
+#tokenizer.fit_on_texts(reviews_test)
+list_tokenized_test = tokenizer.texts_to_sequences(reviews_test)
+x_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
 y_test = test['stars']
-print(np.unique(test['stars']))
+
 
 #######################################################################
 
@@ -121,7 +120,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=True)
+                            trainable=False)
 
 #Randomly initialized 
 #embedding_layer = Embedding(len(word_index) + 1,
@@ -132,56 +131,53 @@ embedding_layer = Embedding(len(word_index) + 1,
 #############################################
 # Original yoon kim with batch norm and drop out0
 #############################################
-conv_filters = 128
-drop_out_rate = 0.1 + np.random.rand()*0.25
+conv_filters = 64
+drop_out_rate = 0.4 + np.random.rand()*0.25
+l2_pen = 0.5
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
-conv1_1 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
-#conv1_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(l2_pen))(embedded_sequences)
 btch1_1 = BatchNormalization()(conv1_1)
 actv1_1 = Activation('relu')(btch1_1)
-conv1_2 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(0.01))(actv1_1)
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(l2_pen))(actv1_1)
 btch1_2 = BatchNormalization()(conv1_2)
 actv1_2 = Activation('relu')(btch1_2)
-glmp1_1 = MaxPooling1D(pool_size = 4)(actv1_2)
+glmp1_1 = MaxPooling1D(pool_size = 8)(actv1_2)
 
-conv2_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
-#conv2_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
+conv2_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(l2_pen))(embedded_sequences)
 btch2_1 = BatchNormalization()(conv2_1)
 actv2_1 = Activation('relu')(btch2_1)
-conv2_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.01))(actv2_1)
+conv2_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(l2_pen))(actv2_1)
 btch2_2 = BatchNormalization()(conv2_2)
 actv2_2 = Activation('relu')(btch2_2)
-glmp2_1 = MaxPooling1D(pool_size = 4)(actv2_2)
+glmp2_1 = MaxPooling1D(pool_size = 8)(actv2_2)
 
-conv3_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
-#conv3_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
+conv3_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(l2_pen))(embedded_sequences)
 btch3_1 = BatchNormalization()(conv3_1)
 actv3_1 = Activation('relu')(btch3_1)
-conv3_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.01))(actv3_1)
+conv3_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(l2_pen))(actv3_1)
 btch3_2 = BatchNormalization()(conv3_2)
 actv3_2 = Activation('relu')(btch3_2)
-glmp3_1 = MaxPooling1D(pool_size = 4)(actv3_2)
+glmp3_1 = MaxPooling1D(pool_size = 8)(actv3_2)
 
-conv4_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
-#conv4_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
+conv4_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(l2_pen))(embedded_sequences)
 btch4_1 = BatchNormalization()(conv4_1)
 actv4_1 = Activation('relu')(btch4_1)
-conv4_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.01))(actv4_1)
+conv4_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(l2_pen))(actv4_1)
 btch4_2 = BatchNormalization()(conv4_2)
 actv4_2 = Activation('relu')(btch4_2)
-glmp4_1 = MaxPooling1D(pool_size = 4)(actv4_2)
+glmp4_1 = MaxPooling1D(pool_size = 8)(actv4_2)
 
 # Gather all convolution layers
 cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
 drp = Dropout(drop_out_rate)(cnct)
 
-dns1  = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp)
+dns1  = Dense(64, activation='relu',kernel_regularizer=regularizers.l2(l2_pen))(drp)
 btch1 = BatchNormalization()(dns1)
 drp1  = Dropout(drop_out_rate)(btch1)
-dns2  = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+dns2  = Dense(32, activation='relu',kernel_regularizer=regularizers.l2(l2_pen))(drp1)
 btch2 = BatchNormalization()(dns2)
 drp2 = Dropout(drop_out_rate)(btch2)
 flat = Flatten()(drp2)
@@ -196,24 +192,23 @@ model.summary()
 
 
 
+
 batch_size = 512
 epochs = 100
-history = model.fit(X_t,y, batch_size=batch_size, epochs=epochs, validation_split=0.2)
+history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, validation_data = [x_test,y_test])
 
-prediction = model.predict(X_test)
+
+prediction = model.predict(x_test)
 y_pred = (prediction > 0.5).astype(int).reshape(-1,)
-#print(y_pred[-200:])
 y_test = np.array(y_test)
-#print(y_test[-200:])
-#print(y_test.shape)
-#print(y_pred.shape)
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score, confusion_matrix
-print('accuracy :{0}'.format(accuracy_score(y_pred, y_test)))
+
+score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)
+print("Test acc: " , acc)
+print("Test score: " , score)
 
 #################################################################
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/2_label/yoon_kim_batch_pre", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/2_label/yoon_kim_batch_2", "wb") as output_file:
     pickle.dump(history.history, output_file)

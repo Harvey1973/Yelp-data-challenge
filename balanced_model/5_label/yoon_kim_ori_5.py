@@ -66,7 +66,7 @@ print(np.unique(test['stars']))
 
 whole_data = pd.concat([reviews_train,reviews_test])
 
-maxlen = 100
+maxlen = 130
 max_features = 15000
 tokenizer = Tokenizer(num_words=max_features)
 
@@ -130,7 +130,7 @@ embedding_layer = Embedding(len(word_index) + 1,
 # Orignal Yoon Kim 
 ##############################
 
-conv_filters = 128
+conv_filters = 16
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
@@ -147,15 +147,16 @@ conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
 actv1_3 = Activation('relu')(conv1_3)
 glmp1_3 = GlobalMaxPooling1D()(actv1_3)
 
-conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
-actv1_4 = Activation('relu')(conv1_4)
-glmp1_4 = GlobalMaxPooling1D()(actv1_4)
+#conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+#actv1_4 = Activation('relu')(conv1_4)
+#glmp1_4 = GlobalMaxPooling1D()(actv1_4)
 
 # Gather all convolution layers
-cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+#cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
 
 drp1  = Dropout(0.5)(cnct)
-dns1  = Dense(32, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+dns1  = Dense(8, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
 
 out = Dense(5, activation='softmax')(dns1)
 
@@ -171,6 +172,12 @@ history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, valid
 score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)
 print("Test acc: " , acc)
 print("Test score: " , score)
+
+y_pred = np.argmax(model.predict(x_test),axis = 1)
+y_true = test['stars']
+from sklearn.metrics import confusion_matrix
+print(confusion_matrix(y_true, y_pred))
+
 #################################################################
 #Save train history as dict 
 #################################################################
