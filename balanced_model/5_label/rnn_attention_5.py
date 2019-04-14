@@ -1,5 +1,9 @@
+import pandas as pd
+import pickle
+from keras import regularizers
+from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
+from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout,RepeatVector,Permute,multiply,Lambda
 from keras.layers import concatenate
 from keras.layers import Bidirectional, GlobalMaxPool1D,BatchNormalization
 from keras.models import Model, Sequential
@@ -11,6 +15,7 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
+from keras import backend as K
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -112,7 +117,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=False)
+                            trainable=True)
 
 
 '''
@@ -129,7 +134,7 @@ print("start building model")
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
-units = 64
+units = 128
 activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.2, recurrent_dropout=0.2,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
 
 # compute importance for each step

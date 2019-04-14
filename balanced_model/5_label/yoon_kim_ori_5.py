@@ -76,7 +76,6 @@ x_train = pad_sequences(list_tokenized_train, maxlen=maxlen)
 y_train =to_categorical(train['stars'])
 #####################
 # Test data
-#tokenizer.fit_on_texts(reviews_test)
 list_tokenized_test = tokenizer.texts_to_sequences(reviews_test)
 x_test = pad_sequences(list_tokenized_test, maxlen=maxlen)
 y_test = to_categorical(test['stars'])

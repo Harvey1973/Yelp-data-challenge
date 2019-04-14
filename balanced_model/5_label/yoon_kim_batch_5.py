@@ -1,3 +1,7 @@
+import pandas as pd
+import pickle
+from keras import regularizers
+from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
 from keras.layers import concatenate
@@ -11,6 +15,7 @@ import sys
 import os
 import tensorflow as tf
 import keras.backend.tensorflow_backend as ktf
+from keras.optimizers import Adam
 
 # Get the number of cores assigned to this job.
 def get_n_cores():
@@ -112,7 +117,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=False)
+                            trainable=True)
 
 
 '''
@@ -133,41 +138,41 @@ sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
-conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 #conv1_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
 btch1_1 = BatchNormalization()(conv1_1)
 actv1_1 = Activation('relu')(btch1_1)
-#conv1_2 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(0.1))(actv1_1)
-#btch1_2 = BatchNormalization()(conv1_2)
-#actv1_2 = Activation('relu')(btch1_2)
-glmp1_1 = MaxPooling1D(pool_size = 4)(actv1_1)
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=2,kernel_regularizer=regularizers.l2(0.1))(actv1_1)
+btch1_2 = BatchNormalization()(conv1_2)
+actv1_2 = Activation('relu')(btch1_2)
+glmp1_1 = MaxPooling1D(pool_size = 4)(actv1_2)
 
-conv2_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
+conv2_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 #conv2_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
 btch2_1 = BatchNormalization()(conv2_1)
 actv2_1 = Activation('relu')(btch2_1)
-#conv2_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.1))(actv2_1)
-#btch2_2 = BatchNormalization()(conv2_2)
-#actv2_2 = Activation('relu')(btch2_2)
-glmp2_1 = MaxPooling1D(pool_size = 4)(actv2_1)
+conv2_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.1))(actv2_1)
+btch2_2 = BatchNormalization()(conv2_2)
+actv2_2 = Activation('relu')(btch2_2)
+glmp2_1 = MaxPooling1D(pool_size = 4)(actv2_2)
 
-conv3_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
+conv3_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
 #conv3_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
 btch3_1 = BatchNormalization()(conv3_1)
 actv3_1 = Activation('relu')(btch3_1)
-#conv3_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.1))(actv3_1)
-#btch3_2 = BatchNormalization()(conv3_2)
-#actv3_2 = Activation('relu')(btch3_2)
-glmp3_1 = MaxPooling1D(pool_size = 4)(actv3_1)
+conv3_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.1))(actv3_1)
+btch3_2 = BatchNormalization()(conv3_2)
+actv3_2 = Activation('relu')(btch3_2)
+glmp3_1 = MaxPooling1D(pool_size = 4)(actv3_2)
 
-conv4_1 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(0.01))(embedded_sequences)
-conv4_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
+conv4_1 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
+#conv4_1 = Conv1D(filters=conv_filters, kernel_size=2)(embedded_sequences)
 btch4_1 = BatchNormalization()(conv4_1)
 actv4_1 = Activation('relu')(btch4_1)
-#conv4_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.1))(actv4_1)
-#btch4_2 = BatchNormalization()(conv4_2)
-#actv4_2 = Activation('relu')(btch4_2)
-glmp4_1 = MaxPooling1D(pool_size = 4)(actv4_1)
+conv4_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.1))(actv4_1)
+btch4_2 = BatchNormalization()(conv4_2)
+actv4_2 = Activation('relu')(btch4_2)
+glmp4_1 = MaxPooling1D(pool_size = 4)(actv4_2)
 
 # Gather all convolution layers
 cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
@@ -176,16 +181,16 @@ drp = Dropout(drop_out_rate)(cnct)
 dns1  = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp)
 btch1 = BatchNormalization()(dns1)
 drp1  = Dropout(drop_out_rate)(btch1)
-dns2  = Dense(64, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp1)
+dns2  = Dense(128, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp1)
 btch2 = BatchNormalization()(dns2)
 drp2 = Dropout(drop_out_rate)(btch2)
 flat = Flatten()(drp2)
-out = Dense(1, activation='sigmoid')(flat)
+out = Dense(5, activation='softmax')(flat)
 
 adam = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
 model = Model(inputs = sequence_input, outputs=out)
-model.compile(optimizer = adam, loss='binary_crossentropy', metrics=['acc'])
+model.compile(optimizer = adam, loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 
 batch_size = 512

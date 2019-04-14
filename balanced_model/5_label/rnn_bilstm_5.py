@@ -1,3 +1,7 @@
+import pandas as pd
+import pickle
+from keras import regularizers
+from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 from keras.layers import Dense , Input , LSTM , Embedding, Dropout , Activation, GRU, Flatten,Conv2D,Conv1D,MaxPooling1D, Dropout
 from keras.layers import concatenate
@@ -112,7 +116,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=False)
+                            trainable=True)
 
 
 '''
@@ -125,14 +129,17 @@ embedding_layer = Embedding(len(word_index) + 1,
 '''
 
 ########
-units = 64
+units = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-activations = Bidirectional(LSTM(units, return_sequences = True,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
+activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.25,kernel_regularizer=regularizers.l2(0.1)))(embedded_sequences)
 #glob_pool = GlobalMaxPool1D()(activations)
-glob_pool = MaxPooling1D(pool_size = 4)(activations)
-dense_1 = Dense(256, activation="relu",kernel_regularizer=regularizers.l2(0.1))(glob_pool)
-drop_1 = Dropout(0.25)(dense_1)
+#glob_pool = MaxPooling1D(pool_size = 4)(activations)
+dense_1 = Dense(256, activation="relu",kernel_regularizer=regularizers.l2(0.1))(activations)
+batch_1 = BatchNormalization()(dense_1)
+drop_1 = Dropout(0.25)(batch_1)
+dense_2 = Dense(128, activation="relu",kernel_regularizer=regularizers.l2(0.1))(drop_1)
+drop_2 = Dropout(0.25)(dense_2)
 flat1 = Flatten()(drop_1)
 out = Dense(5, activation="softmax")(flat1)
 

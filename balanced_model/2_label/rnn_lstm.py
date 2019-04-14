@@ -87,8 +87,8 @@ y_test = test['stars']
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
-#GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
-GLOVE_DIR ="/home/ec2-user/Data/"
+GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
+#GLOVE_DIR ="/home/ec2-user/Data/"
 #GLOVE_DIR = "/Users/harvey/Desktop/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
@@ -143,7 +143,7 @@ model.summary()
 
 
 batch_size = 512
-epochs = 50
+epochs = 100
 history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, validation_data = [x_test,y_test])
 
 score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)

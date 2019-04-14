@@ -87,8 +87,8 @@ y_test = test['stars']
 #####################################################################
 # Using pretrained glove vector
 #####################################################################
-#GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
-GLOVE_DIR ="/home/ec2-user/Data/"
+GLOVE_DIR = "/usr4/cs542sp/zzjiang/Data/"
+#GLOVE_DIR ="/home/ec2-user/Data/"
 #GLOVE_DIR = "/Users/harvey/Desktop/Data/"
 embeddings_index = {}
 f = open(os.path.join(GLOVE_DIR, 'glove.6B.100d.txt'),encoding = 'utf8')
@@ -128,7 +128,7 @@ embedding_layer = Embedding(len(word_index) + 1,
 # Orignal Yoon Kim 
 ##############################
 
-conv_filters = 4
+conv_filters = 32
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
@@ -150,11 +150,11 @@ actv1_4 = Activation('relu')(conv1_4)
 glmp1_4 = GlobalMaxPooling1D()(actv1_4)
 
 # Gather all convolution layers
-#cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
 #cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
-cnct = concatenate([glmp1_1, glmp1_2], axis=1)
+#cnct = concatenate([glmp1_1, glmp1_2], axis=1)
 drp1  = Dropout(0.1)(cnct)
-dns1  = Dense(4, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+dns1  = Dense(32, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp1)
 #drp2  = Dropout(0.5)(dns1)
 #dns2 = 
 out = Dense(1, activation='sigmoid')(dns1)
@@ -167,7 +167,7 @@ model.summary()
 
 
 batch_size = 512
-epochs = 50
+epochs = 100
 history = model.fit(x_train,y_train, batch_size=batch_size, epochs=epochs, validation_data = [x_test,y_test])
 
 score, acc = model.evaluate(x_test,y_test,batch_size = batch_size)
