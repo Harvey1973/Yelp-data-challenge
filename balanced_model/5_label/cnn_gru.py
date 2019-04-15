@@ -130,60 +130,60 @@ embedding_layer = Embedding(len(word_index) + 1,
 
 '''
 conv_filters = 128
-units = 64
+units = 32
 drop_out_rate = 0.3 + np.random.rand()*0.25
-
+l2_penalty = 0.05
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
-conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.2))(embedded_sequences)
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(l2_penalty))(embedded_sequences)
 btch1_1 = BatchNormalization()(conv1_1)
 actv1_1 = Activation('relu')(btch1_1)
-conv1_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.2))(actv1_1)
-btch1_2 = BatchNormalization()(conv1_2)
-actv1_2 = Activation('relu')(btch1_2)
-glmp1_1 = MaxPooling1D(pool_size = 2)(actv1_2)
+#conv1_2 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(l2_penalty))(actv1_1)
+#btch1_2 = BatchNormalization()(conv1_2)
+#actv1_2 = Activation('relu')(btch1_2)
+glmp1_1 = MaxPooling1D(pool_size = 4)(actv1_1)
 
-conv2_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.2))(embedded_sequences)
+conv2_1 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(l2_penalty))(embedded_sequences)
 btch2_1 = BatchNormalization()(conv2_1)
 actv2_1 = Activation('relu')(btch2_1)
-conv2_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(0.2))(actv2_1)
-btch2_2 = BatchNormalization()(conv2_2)
-actv2_2 = Activation('relu')(btch2_2)
-glmp2_1 = MaxPooling1D(pool_size = 2)(actv2_2)
+#conv2_2 = Conv1D(filters=conv_filters, kernel_size=4,kernel_regularizer=regularizers.l2(l2_penalty))(actv2_1)
+#btch2_2 = BatchNormalization()(conv2_2)
+#actv2_2 = Activation('relu')(btch2_2)
+glmp2_1 = MaxPooling1D(pool_size = 4)(actv2_1)
 
-conv3_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.2))(embedded_sequences)
+conv3_1 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(l2_penalty))(embedded_sequences)
 btch3_1 = BatchNormalization()(conv3_1)
 actv3_1 = Activation('relu')(btch3_1)
-conv3_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(0.2))(actv3_1)
-btch3_2 = BatchNormalization()(conv3_2)
-actv3_2 = Activation('relu')(btch3_2)
-glmp3_1 = MaxPooling1D(pool_size = 2)(actv3_2)
+#conv3_2 = Conv1D(filters=conv_filters, kernel_size=5,kernel_regularizer=regularizers.l2(l2_penalty))(actv3_1)
+#btch3_2 = BatchNormalization()(conv3_2)
+#actv3_2 = Activation('relu')(btch3_2)
+glmp3_1 = MaxPooling1D(pool_size = 4)(actv3_1)
 
-conv4_1 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(0.2))(embedded_sequences)
+conv4_1 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(l2_penalty))(embedded_sequences)
 btch4_1 = BatchNormalization()(conv4_1)
 actv4_1 = Activation('relu')(btch4_1)
-conv4_2 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(0.2))(actv4_1)
-btch4_2 = BatchNormalization()(conv4_2)
-actv4_2 = Activation('relu')(btch4_2)
-glmp4_1 = MaxPooling1D(pool_size = 2)(actv4_2)
+#conv4_2 = Conv1D(filters=conv_filters, kernel_size=6,kernel_regularizer=regularizers.l2(l2_penalty))(actv4_1)
+#btch4_2 = BatchNormalization()(conv4_2)
+#actv4_2 = Activation('relu')(btch4_2)
+glmp4_1 = MaxPooling1D(pool_size = 4)(actv4_1)
 
 # Gather all convolution layers
 cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
 drp = Dropout(drop_out_rate)(cnct)
 
-bilstm = Bidirectional(GRU(units, return_sequences=True, dropout=0.3, recurrent_dropout=0.3))(conv_1)
-
-dns_1 = Dense(50, activation="relu")(bilstm)
+bilstm = Bidirectional(LSTM(units, return_sequences=True, dropout=0.3, recurrent_dropout=0.3))(drp)
+flat1 = Flatten()(bilstm)
+dns_1 = Dense(256, activation="relu")(flat1)
 drp_1 = Dropout(0.25)(dns_1)
 out = Dense(5, activation="softmax")(drp_1)
 
 adam = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
 model = Model(inputs = sequence_input, outputs=out)
-model.compile(optimizer = adam, loss='categorical_crossentropy', metrics=['acc'])
+model.compile(optimizer = 'rmsprop', loss='categorical_crossentropy', metrics=['acc'])
 model.summary()
 
 batch_size = 512
