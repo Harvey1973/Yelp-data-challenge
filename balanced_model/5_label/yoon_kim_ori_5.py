@@ -155,8 +155,8 @@ glmp1_3 = GlobalMaxPooling1D()(actv1_3)
 #cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
 cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
 
-drp1  = Dropout(0.5)(cnct)
-dns1  = Dense(8, activation='relu',kernel_regularizer=regularizers.l2(0.01))(drp1)
+drp1  = Dropout(0.7)(cnct)
+dns1  = Dense(16, activation='relu',kernel_regularizer=regularizers.l2(0.25))(drp1)
 
 out = Dense(5, activation='softmax')(dns1)
 

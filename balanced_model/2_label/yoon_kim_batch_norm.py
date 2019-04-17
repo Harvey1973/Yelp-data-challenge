@@ -129,10 +129,52 @@ embedding_layer = Embedding(len(word_index) + 1,
 #                            input_length=maxlen,
 #                            trainable=True)
 
+
+conv_filters = 128
+sequence_input = Input(shape=(maxlen,), dtype='int32')
+embedded_sequences = embedding_layer(sequence_input)
+
+# Specify each convolution layer and their kernel siz i.e. n-grams 
+conv1_1 = Conv1D(filters=conv_filters, kernel_size=3)(embedded_sequences)
+btch1_1 = BatchNormalization()(conv1_1)
+actv1_1 = Activation('relu')(btch1_1)
+glmp1_1 = GlobalMaxPooling1D()(actv1_1)
+
+conv1_2 = Conv1D(filters=conv_filters, kernel_size=4)(embedded_sequences)
+btch1_2 = BatchNormalization()(conv1_2)
+actv1_2 = Activation('relu')(btch1_2)
+glmp1_2 = GlobalMaxPooling1D()(actv1_2)
+
+conv1_3 = Conv1D(filters=conv_filters, kernel_size=5)(embedded_sequences)
+btch1_3 = BatchNormalization()(conv1_3)
+actv1_3 = Activation('relu')(btch1_3)
+glmp1_3 = GlobalMaxPooling1D()(actv1_3)
+
+conv1_4 = Conv1D(filters=conv_filters, kernel_size=6)(embedded_sequences)
+btch1_4 = BatchNormalization()(conv1_4)
+actv1_4 = Activation('relu')(btch1_4)
+glmp1_4 = GlobalMaxPooling1D()(actv1_4)
+
+# Gather all convolution layers
+cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
+#cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
+#cnct = concatenate([glmp1_1, glmp1_2], axis=1)
+drp1  = Dropout(0.5)(cnct)
+dns1  = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(2.0))(drp1)
+btch_2 = BatchNormalization()(dns1)
+#drp2  = Dropout(0.5)(dns1)
+#dns2 = 
+out = Dense(1, activation='sigmoid')(btch_2)
+
+
+
+
+
+'''
 #############################################
 # Original yoon kim with batch norm and drop out0
 #############################################
-conv_filters = 16
+conv_filters = 128
 drop_out_rate = 0.4 + np.random.rand()*0.25
 l2_pen = 1.5
 sequence_input = Input(shape=(maxlen,), dtype='int32')
@@ -185,6 +227,8 @@ drp2 = Dropout(drop_out_rate)(btch2)
 flat = Flatten()(drp2)
 out = Dense(1, activation='sigmoid')(flat)
 
+
+'''
 adam = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 model = Model(inputs = sequence_input, outputs=out)
 model.compile(optimizer = adam, loss='binary_crossentropy', metrics=['acc'])

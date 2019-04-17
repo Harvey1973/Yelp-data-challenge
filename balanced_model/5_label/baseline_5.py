@@ -134,7 +134,7 @@ model.add(embedding_layer)
 model.add(Conv1D(filters=32, kernel_size=3, padding='same', activation='relu',kernel_regularizer=regularizers.l2(l2_penalty)))
 model.add(MaxPooling1D(pool_size=2))
 model.add(Flatten())
-model.add(Dense(32, activation='relu',,kernel_regularizer=regularizers.l2(l2_penalty)))
+model.add(Dense(32, activation='relu',kernel_regularizer=regularizers.l2(l2_penalty)))
 model.add(Dense(5, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 model.summary()
@@ -152,5 +152,5 @@ print("Test score: " , score)
 #Save train history as dict 
 #################################################################
 
-with open(r"/usr4/cs542sp/zzjiang/History/2_label/baseline_5", "wb") as output_file:
+with open(r"/usr4/cs542sp/zzjiang/History/5_label/baseline_5", "wb") as output_file:
     pickle.dump(history.history, output_file)

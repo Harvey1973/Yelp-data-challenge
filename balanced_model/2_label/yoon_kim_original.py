@@ -128,7 +128,7 @@ embedding_layer = Embedding(len(word_index) + 1,
 # Orignal Yoon Kim 
 ##############################
 
-conv_filters = 32
+conv_filters = 128
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
@@ -153,8 +153,8 @@ glmp1_4 = GlobalMaxPooling1D()(actv1_4)
 cnct = concatenate([glmp1_1, glmp1_2, glmp1_3, glmp1_4], axis=1)
 #cnct = concatenate([glmp1_1, glmp1_2, glmp1_3], axis=1)
 #cnct = concatenate([glmp1_1, glmp1_2], axis=1)
-drp1  = Dropout(0.1)(cnct)
-dns1  = Dense(32, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp1)
+drp1  = Dropout(0.5)(cnct)
+dns1  = Dense(256, activation='relu',kernel_regularizer=regularizers.l2(2.0))(drp1)
 #drp2  = Dropout(0.5)(dns1)
 #dns2 = 
 out = Dense(1, activation='sigmoid')(dns1)
