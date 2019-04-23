@@ -133,6 +133,7 @@ units = 64
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.5))(embedded_sequences)
+#activations = LSTM(units, return_sequences = True,dropout = 0.5)(embedded_sequences)
 #glob_pool = GlobalMaxPool1D()(activations)
 #glob_pool = MaxPooling1D(pool_size = 4)(activations)
 #dense_1 = Dense(128, activation="relu",kernel_regularizer=regularizers.l2(0.1))(activations)
@@ -140,7 +141,7 @@ activations = Bidirectional(LSTM(units, return_sequences = True,dropout = 0.5))(
 #drop_1 = Dropout(0.5)(batch_1)
 #dense_2 = Dense(64, activation="relu",kernel_regularizer=regularizers.l2(0.1))(drop_1)
 drop_2 = Dropout(0.5)(activations)
-flat1 = Flatten()(drop_1)
+flat1 = Flatten()(drop_2)
 out = Dense(5, activation="softmax")(flat1)
 
 model = Model(inputs=sequence_input, outputs=out)
