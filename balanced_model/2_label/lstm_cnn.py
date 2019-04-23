@@ -125,12 +125,12 @@ embedding_layer = Embedding(len(word_index) + 1,
 
 '''
 
-conv_filters = 32
-units = 32
+conv_filters = 64
+units = 16
 drop_out_rate = 0.3 + np.random.rand()*0.25
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
-activations = LSTM(units, return_sequences = True,dropout = 0.25,recurrent_dropout = 0.25 ,kernel_regularizer=regularizers.l2(0.1))(embedded_sequences)
+activations = LSTM(units, return_sequences = True,dropout = 0.25,recurrent_dropout = 0.25 ,kernel_regularizer=regularizers.l2(0.2))(embedded_sequences)
 
 # Specify each convolution layer and their kernel siz i.e. n-grams 
 conv1_1 = Conv1D(filters=conv_filters, kernel_size=3,kernel_regularizer=regularizers.l2(0.2))(activations)
@@ -166,7 +166,8 @@ actv4_1 = Activation('relu')(btch4_1)
 glmp4_1 = MaxPooling1D(pool_size = 2)(actv4_1)
 
 # Gather all convolution layers
-cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
+#cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
+cnct = concatenate([glmp1_1, glmp2_1, glmp3_1], axis=1)
 drp = Dropout(drop_out_rate)(cnct)
 
 dns1  = Dense(64, activation='relu',kernel_regularizer=regularizers.l2(0.1))(drp)
@@ -181,7 +182,7 @@ out = Dense(1, activation='sigmoid')(flat)
 #adam = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
 model = Model(inputs = sequence_input, outputs=out)
-model.compile(optimizer = "rmsprop"", loss='binary_crossentropy', metrics=['acc'])
+model.compile(optimizer = 'rmsprop', loss='binary_crossentropy', metrics=['acc'])
 model.summary()
 
 batch_size = 512

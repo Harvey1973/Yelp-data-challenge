@@ -126,9 +126,9 @@ embedding_layer = Embedding(len(word_index) + 1,
 '''
 
 conv_filters = 32
-units = 32
+units = 16
 drop_out_rate = 0.3 + np.random.rand()*0.25
-l2_penalty = 0.05
+l2_penalty = 0.25
 sequence_input = Input(shape=(maxlen,), dtype='int32')
 embedded_sequences = embedding_layer(sequence_input)
 
@@ -167,12 +167,13 @@ actv4_1 = Activation('relu')(btch4_1)
 glmp4_1 = MaxPooling1D(pool_size = 4)(actv4_1)
 
 # Gather all convolution layers
-cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
+#cnct = concatenate([glmp1_1, glmp2_1, glmp3_1, glmp4_1], axis=1)
+cnct = concatenate([glmp1_1, glmp2_1, glmp3_1], axis=1)
 drp = Dropout(drop_out_rate)(cnct)
 
 bilstm = Bidirectional(LSTM(units, return_sequences=True, dropout=0.3, recurrent_dropout=0.3))(drp)
 flat1 = Flatten()(bilstm)
-dns_1 = Dense(128, activation="relu")(flat1)
+dns_1 = Dense(32, activation="relu")(flat1)
 drp_1 = Dropout(0.25)(dns_1)
 out = Dense(1, activation="sigmoid")(drp_1)
 
