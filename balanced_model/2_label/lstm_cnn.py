@@ -115,7 +115,7 @@ embedding_layer = Embedding(len(word_index) + 1,
                             embed_size,
                             weights=[embedding_matrix],
                             input_length=maxlen,
-                            trainable=False)
+                            trainable=True)
 '''
 #Randomly initialized 
 embedding_layer = Embedding(len(word_index) + 1,
