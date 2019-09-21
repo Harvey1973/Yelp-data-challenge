@@ -1,7 +1,7 @@
 # Yelp-data-challenge
 This is repo for sentence classfication on Yelp data set using deep learning. <br/>
 If there is any question or bug you found please contact: zzjiang@bu.edu
-
+# Full report at : https://drive.google.com/file/d/1kIxDmdJZWdIrmY0w5pjLdmAJeJFqvQqn/view
 # Preprocess steps
 The original dataset can be obtained from : <br/>
 https://www.yelp.com/dataset <br/>
